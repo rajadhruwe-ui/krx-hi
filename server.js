@@ -16,6 +16,7 @@ const io = require('socket.io')(server, {
 io.on('connection', (socket) => {
   let room = null;
 
+  // Join a room
   socket.on('join', (roomId) => {
     if (room) socket.leave(room);
     room = roomId;
@@ -23,7 +24,7 @@ io.on('connection', (socket) => {
     socket.emit('joined', roomId);
   });
 
-  // Relay audio chunks (ArrayBuffer / base64) to everyone else in the room
+  // Relay audio chunks
   socket.on('ptt-chunk', ({ roomId, chunk, mimeType, seq }) => {
     socket.to(roomId).emit('ptt-chunk', { chunk, mimeType, seq });
   });
@@ -34,6 +35,17 @@ io.on('connection', (socket) => {
 
   socket.on('ptt-stop', ({ roomId }) => {
     socket.to(roomId).emit('ptt-stop');
+  });
+
+  // ======================
+  // Chat Message Handling
+  // ======================
+  socket.on('chat-message', ({ roomId, sender, message }) => {
+    const timestamp = new Date().toISOString();
+    // Send message to everyone else in the room
+    socket.to(roomId).emit('chat-message', { sender, message, timestamp });
+    // Optionally: echo back to the sender
+    socket.emit('chat-message', { sender, message, timestamp });
   });
 
   socket.on('disconnect', () => {});
