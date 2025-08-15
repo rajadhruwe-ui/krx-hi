@@ -1,5 +1,5 @@
 const express = require('express');
-const http = require('https');
+const http = require('http');
 const cors = require('cors');
 
 const app = express();
@@ -7,7 +7,7 @@ app.use(cors({ origin: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-const server = https.createServer(app);
+const server = http.createServer(app);
 const io = require('socket.io')(server, {
   cors: { origin: '*' },
   maxHttpBufferSize: 1e7 // ~10 MB to allow short audio chunks
