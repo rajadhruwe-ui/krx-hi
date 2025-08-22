@@ -67,7 +67,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const PORT = 5000;
+const PORT = 80;
 app.listen(PORT, () => {
   console.log(`✅ Translation server running on http://localhost:${PORT}`);
 });
