@@ -1,43 +1,73 @@
-const express = require('express');
-const http = require('http');
-const cors = require('cors');
+const express = require("express");
+const fs = require("fs");
+const csv = require("csv-parser");
+const cors = require("cors");
 
 const app = express();
-app.use(cors({ origin: true }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json());
+app.use(cors());
 
-const server = http.createServer(app);
-const io = require('socket.io')(server, {
-  cors: { origin: '*' },
-  maxHttpBufferSize: 1e7 // ~10 MB to allow short audio chunks
+// Load lexicon from CSV
+let lexicon = {};
+
+try {
+  fs.createReadStream("lexicon.csv")
+    .pipe(csv())
+    .on("data", (row) => {
+      lexicon[row.kurukh] = {
+        hindi: row.hindi,
+        pos: row.pos,
+        notes: row.notes
+      };
+    })
+    .on("end", () => {
+      console.log("Lexicon loaded:", Object.keys(lexicon).length, "entries");
+    });
+} catch (err) {
+  console.error("Error loading lexicon.csv:", err.message);
+}
+
+// Rule-based translator
+function ruleBasedTranslate(sentence) {
+  const words = sentence.split(/\s+/);
+  let translated = [];
+
+  for (let w of words) {
+    if (lexicon[w]) {
+      translated.push(lexicon[w].hindi);
+    } else {
+      translated.push(w); // keep original if not found
+    }
+  }
+  return translated.join(" ");
+}
+
+// API endpoint with try-catch
+app.post('/translate', (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text || text.trim() === "") {
+      return res.status(400).json({ error: "Input text is required." });
+    }
+
+    const hindiText = ruleBasedTranslate(text);
+    res.json({ translation: hindiText });
+
+  } catch (error) {
+    console.error("Translation error:", error.message);
+    res.status(500).json({ error: "Server error while translating." });
+  }
 });
 
-io.on('connection', (socket) => {
-  let room = null;
-
-  socket.on('join', (roomId) => {
-    if (room) socket.leave(room);
-    room = roomId;
-    socket.join(roomId);
-    socket.emit('joined', roomId);
-  });
-
-  // Relay audio chunks (ArrayBuffer / base64) to everyone else in the room
-  socket.on('ptt-chunk', ({ roomId, chunk, mimeType, seq }) => {
-    socket.to(roomId).emit('ptt-chunk', { chunk, mimeType, seq });
-  });
-
-  socket.on('ptt-start', ({ roomId }) => {
-    socket.to(roomId).emit('ptt-start');
-  });
-
-  socket.on('ptt-stop', ({ roomId }) => {
-    socket.to(roomId).emit('ptt-stop');
-  });
-
-  socket.on('disconnect', () => {});
+// Global error handler (fallback)
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err.stack);
+  res.status(500).json({ error: "Unexpected server error." });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`PTT server running on :${PORT}`));
+// Start server
+const PORT = 5000;
+app.listen(PORT, () => {
+  console.log(`✅ Translation server running on http://localhost:${PORT}`);
+});
