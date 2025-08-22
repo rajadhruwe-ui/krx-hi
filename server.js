@@ -10,64 +10,33 @@ app.use(cors());
 // Load lexicon from CSV
 let lexicon = {};
 
-try {
-  fs.createReadStream("lexicon.csv")
-    .pipe(csv())
-    .on("data", (row) => {
-      lexicon[row.kurukh] = {
-        hindi: row.hindi,
-        pos: row.pos,
-        notes: row.notes
-      };
-    })
-    .on("end", () => {
-      console.log("Lexicon loaded:", Object.keys(lexicon).length, "entries");
-    });
-} catch (err) {
-  console.error("Error loading lexicon.csv:", err.message);
-}
+fs.createReadStream("lexicon.csv")
+  .pipe(csv())
+  .on("data", (row) => {
+    lexicon[row.kurukh] = {
+      hindi: row.hindi,
+      pos: row.pos,
+      notes: row.notes
+    };
+  })
+  .on("end", () => {
+    console.log("Lexicon loaded:", Object.keys(lexicon).length, "entries");
+  });
 
-// Rule-based translator
-function ruleBasedTranslate(sentence) {
-  const words = sentence.split(/\s+/);
-  let translated = [];
+// Root route to fix 'Cannot GET /'
+app.get('/', (req, res) => {
+  res.send('Kurukh-Hindi Translator Server is running!');
+});
 
-  for (let w of words) {
-    if (lexicon[w]) {
-      translated.push(lexicon[w].hindi);
-    } else {
-      translated.push(w); // keep original if not found
-    }
-  }
-  return translated.join(" ");
-}
-
-// API endpoint with try-catch
+// Translation API
 app.post('/translate', (req, res) => {
-  try {
-    const { text } = req.body;
-
-    if (!text || text.trim() === "") {
-      return res.status(400).json({ error: "Input text is required." });
-    }
-
-    const hindiText = ruleBasedTranslate(text);
-    res.json({ translation: hindiText });
-
-  } catch (error) {
-    console.error("Translation error:", error.message);
-    res.status(500).json({ error: "Server error while translating." });
-  }
+  const { text } = req.body;
+  const translatedText = lexicon[text] ? lexicon[text].hindi : "अनुवाद नहीं मिला";
+  res.json({ translation: translatedText });
 });
 
-// Global error handler (fallback)
-app.use((err, req, res, next) => {
-  console.error("Unhandled error:", err.stack);
-  res.status(500).json({ error: "Unexpected server error." });
-});
-
-// Start server
+// Start server on port 80
 const PORT = 80;
 app.listen(PORT, () => {
-  console.log(`✅ Translation server running on http://localhost:${PORT}`);
+  console.log(`Translation server running on http://localhost:${PORT}`);
 });
