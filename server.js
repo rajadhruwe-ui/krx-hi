@@ -1,3 +1,4 @@
+const path = require("path");
 const express = require("express");
 const fs = require("fs");
 const csv = require("csv-parser");
@@ -34,9 +35,24 @@ app.post('/translate', (req, res) => {
   const translatedText = lexicon[text] ? lexicon[text].hindi : "अनुवाद नहीं मिला";
   res.json({ translation: translatedText });
 });
+const PORT = process.env.PORT || 8080;
 
+// Middleware
+app.use(express.json());
+
+// Serve static files (like index.html)
+app.use(express.static(path.join(__dirname, "public")));
+
+// Example API route
+app.get("/api/hello", (req, res) => {
+  res.json({ message: "Hello from KRX-HI API 🚀" });
+});
+
+app.listen(PORT, () => {
+  console.log(`krx-hi API running on http://localhost:${PORT}`);
+});
 // Start server on port 80
-const PORT = 80;
+//const PORT = 80;
 app.listen(PORT, () => {
   console.log(`Translation server running on http://localhost:${PORT}`);
 });
