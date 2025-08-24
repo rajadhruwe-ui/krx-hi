@@ -36,7 +36,7 @@ app.post('/translate', (req, res) => {
 });
 
 // Start server on port 80
-const PORT = 3000;
+const PORT = 80;
 app.listen(PORT, () => {
   console.log(`Translation server running on http://localhost:${PORT}`);
 });
