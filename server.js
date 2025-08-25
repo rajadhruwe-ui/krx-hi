@@ -31,12 +31,24 @@ app.get("/", (req, res) => {
 
 // Translation API
 app.post("/translate", (req, res) => {
+  if (Object.keys(lexicon).length === 0) {
+    return res.status(503).json({ translation: "⚠️ Lexicon not loaded yet" });
+  }
+
   const { text } = req.body;
-  const translatedText = lexicon[text]
-    ? lexicon[text].hindi
+  if (!text) {
+    return res.json({ translation: "❌ कोई शब्द प्रदान नहीं किया गया" });
+  }
+
+  const key = text.trim().toLowerCase();
+  const translatedText = lexicon[key]
+    ? lexicon[key].hindi
     : "अनुवाद नहीं मिला";
+
   res.json({ translation: translatedText });
 });
+
+
 
 // Serve static files (like index.html inside /public)
 app.use(express.static(path.join(__dirname, "public")));
