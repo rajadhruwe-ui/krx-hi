@@ -10,11 +10,10 @@ app.use(cors());
 
 // Load lexicon from CSV
 let lexicon = {};
-
 fs.createReadStream("lexicon.csv")
   .pipe(csv())
   .on("data", (row) => {
-    lexicon[row.kurukh] = {
+    lexicon[row.kurukh.toLowerCase()] = {
       hindi: row.hindi,
       pos: row.pos,
       notes: row.notes
@@ -24,9 +23,12 @@ fs.createReadStream("lexicon.csv")
     console.log("Lexicon loaded:", Object.keys(lexicon).length, "entries");
   });
 
-// Root route
+// Serve static files (like index.html inside /public)
+app.use(express.static(path.join(__dirname, "public")));
+
+// Root route (redirect to index.html if you like)
 app.get("/", (req, res) => {
-  res.send("Kurukh-Hindi Translator Server is running!");
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // Translation API
@@ -36,30 +38,21 @@ app.post("/translate", (req, res) => {
   }
 
   const { text } = req.body;
-  if (!text) {
-    return res.json({ translation: "❌ कोई शब्द प्रदान नहीं किया गया" });
-  }
+  if (!text) return res.json({ translation: "❌ कोई शब्द प्रदान नहीं किया गया" });
 
   const key = text.trim().toLowerCase();
-  const translatedText = lexicon[key]
-    ? lexicon[key].hindi
-    : "अनुवाद नहीं मिला";
+  const translatedText = lexicon[key] ? lexicon[key].hindi : "अनुवाद नहीं मिला";
 
   res.json({ translation: translatedText });
 });
-
-
-
-// Serve static files (like index.html inside /public)
-app.use(express.static(path.join(__dirname, "public")));
 
 // Example API route
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from KRX-HI API 🚀" });
 });
 
-// Start server on custom port (default: 8080)
-const PORT = process.env.PORT || 8080;
+// Start server on custom port
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`krx-hi API running on http://localhost:${PORT}`);
 });
